@@ -23,6 +23,34 @@ npm run shell   # claude を挟まず素の PowerShell で立ち上げる
 開発時は別の窓で `npm run watch` を回しておくと、保存のたびに再ビルドされる。
 `npm run typecheck` で型チェックのみ実行。
 
+### どのフォルダからでも開けるようにする
+
+このアプリは**起動したときの作業フォルダ**で claude を立ち上げる。
+`npm start` はこのリポジトリの中で動いてしまうので、ふだん使いには
+`scripts/ccterm.cmd` を PATH の通った場所(`claude.exe` と同じフォルダなど)へ
+コピーしておくとよい。
+
+```powershell
+npm run build                                   # 先にビルドしておく
+copy scripts\ccterm.cmd "$env:USERPROFILE\.local\bin\"
+```
+
+コピー先では `set "APP=%~dp0.."` の行を、このリポジトリの絶対パスに書き換える。
+
+```bat
+set "APP=C:\Users\tuney\work\my-term-ts"
+```
+
+これで任意のフォルダから起動できる。
+
+```powershell
+cd C:\path\to\your-project
+ccterm            # そのフォルダで claude が立ち上がる
+ccterm --shell    # 素のシェルで立ち上がる
+```
+
+`ccterm` はビルドを挟まないので、**ソースを変更したら `npm run build` が必要**。
+
 ## キー操作
 
 | キー | 動作 |
@@ -54,6 +82,12 @@ renderer は `contextIsolation` 有効で Node API を直接触らず、
 
 ビルドは `build.mjs`(esbuild)で main / preload / renderer の 3 バンドルを作り、
 `dist/` に HTML・CSS・フォントを並べる。
+
+## 配布
+
+自分の PC で使うだけなら、上の `ccterm.cmd` を置くだけでよく、パッケージングは要らない。
+別の PC へ持っていく場合は `electron-builder` を足す
+(注意点は [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) の M6 にまとめてある)。
 
 ## ドキュメント
 
