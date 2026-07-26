@@ -54,7 +54,7 @@ ccterm --shell    # 素のシェルで立ち上がる
 
 | キー | 動作 |
 | --- | --- |
-| `Ctrl+Enter` | claude の入力欄で改行する(送信しない) |
+| `Ctrl+Enter` / `Shift+Enter` | claude の入力欄で改行する(送信しない) |
 | `F1` | 入力メモパネルの表示切替(既定は非表示) |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | タブを次 / 前へ切替 |
 | `Ctrl+C` `Ctrl+V` など | 通常どおり端末へ送られる |

@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-import { claudeLaunch, homeDir, shellLaunch, startupDir } from './launch';
+import { claudeLaunch, shellLaunch, startupDir } from './launch';
 import { PtyManager } from './pty';
 import type { Bootstrap, LaunchConfig } from '../shared/types';
 
@@ -79,7 +79,8 @@ app.on('before-quit', () => {
 // ---------------------------------------------------------------- IPC: 起動情報
 
 ipcMain.handle('app:bootstrap', (): Bootstrap => {
-  const cwd = plainShell ? homeDir() : startupDir();
+  // どちらのモードでも「起動したフォルダ」で開く。
+  const cwd = startupDir();
   return {
     plainShell,
     initialLaunch: plainShell ? shellLaunch(cwd) : claudeLaunch(cwd),
@@ -109,7 +110,8 @@ ipcMain.on('pty:kill', (_e, id: number) => ptys?.kill(id));
  * claude モードなら開くフォルダを選ばせる(キャンセルなら null)。
  */
 ipcMain.handle('app:newTabLaunch', async (): Promise<LaunchConfig | null> => {
-  if (plainShell) return shellLaunch(homeDir());
+  // 素シェルモードは「すぐシェルが欲しい」用途なので、選ばせずに起動フォルダで開く。
+  if (plainShell) return shellLaunch(startupDir());
   if (!win) return null;
 
   const result = await dialog.showOpenDialog(win, {

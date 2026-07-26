@@ -116,10 +116,14 @@ export class TermSession {
         event.preventDefault();
         return false;
       }
-      // Ctrl+Enter は「送信」ではなく「入力欄で改行」。
+      // Ctrl+Enter / Shift+Enter は「送信」ではなく「入力欄で改行」。
       // xterm は修飾キーを見ずに CR を送ってしまい claude が送信と解釈するので、
       // ここで横取りして ESC CR(= Alt+Enter 相当)を送る。
-      if (event.key === 'Enter' && event.ctrlKey && !event.altKey) {
+      if (
+        event.key === 'Enter' &&
+        (event.ctrlKey || event.shiftKey) &&
+        !event.altKey
+      ) {
         this.sendSoftNewline();
         event.preventDefault();
         return false;
