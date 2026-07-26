@@ -1,0 +1,318 @@
+/* my-term-ts の画面レイアウトと配色。
+   端末そのものの見た目は xterm.js の theme(theme.ts)側で決まる。 */
+
+/* 欧文は同梱の Cascadia Mono。バックスラッシュが正しく出て、配布時も依存がない。
+   和文は Cascadia に無いので、CSS の font-family 側でシステムフォントへ落とす。 */
+@font-face {
+  font-family: 'Cascadia Mono';
+  src: url('./assets/CascadiaMono-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  /* 端末の文字幅計測より先に読み終わっていてほしいので block。 */
+  font-display: block;
+}
+
+:root {
+  --bg: #0c0c0c;
+  --fg: #d0d0d0;
+  --chrome: #1a1a1a; /* タブバー・ステータスバーの背景 */
+  --chrome-hi: #2a2a2a; /* ホバー・アクティブ */
+  --border: #333;
+  --accent: #ff9d00; /* 承認まちのアクセント */
+  --ui-font: 'Segoe UI', 'Yu Gothic UI', 'Meiryo', sans-serif;
+  --mono-font: 'Cascadia Mono', 'BIZ UDGothic', 'MS Gothic', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--ui-font);
+  font-size: 13px;
+  /* UI 部分のテキスト選択は不要(端末側は xterm が別途扱う)。 */
+  user-select: none;
+  cursor: default;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ------------------------------------------------------------- レイアウト */
+
+#app {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+}
+
+#main {
+  display: flex;
+  min-height: 0; /* grid の子が中身に押し広げられないように */
+}
+
+/* ------------------------------------------------------------- タブバー */
+
+#tabbar {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 3px 4px 0;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+#tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: 5px 5px 0 0;
+  background: transparent;
+  color: #999;
+  white-space: nowrap;
+}
+
+.tab:hover {
+  background: var(--chrome-hi);
+}
+
+.tab.active {
+  background: var(--bg);
+  border-color: var(--border);
+  color: var(--fg);
+}
+
+/* 背景タブが承認まちになったことを示す ● */
+.tab .mark {
+  color: var(--accent);
+}
+
+.tab.attention {
+  color: var(--accent);
+}
+
+.tab .label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tab .close {
+  padding: 0 3px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tab .close:hover {
+  background: #555;
+}
+
+#new-tab {
+  align-self: center;
+  padding: 3px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: #999;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+#new-tab:hover {
+  background: var(--chrome-hi);
+  color: var(--fg);
+}
+
+/* ------------------------------------------------------------- 端末領域 */
+
+#terms {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+}
+
+/* 各タブの xterm コンテナ。重ねて置き、アクティブなものだけ表示する。 */
+.term {
+  position: absolute;
+  inset: 0;
+  padding: 4px;
+}
+
+/* 承認まちの間はアクティブな端末を枠で囲んで目立たせる。 */
+#terms.waiting {
+  box-shadow: inset 0 0 0 4px var(--accent);
+}
+
+#waiting-banner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 4px 8px;
+  background: var(--accent);
+  color: #000;
+  font-family: var(--mono-font);
+  text-align: center;
+}
+
+/* ------------------------------------------------------------- 入力メモ */
+
+#memo {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  min-width: 280px;
+  background: var(--chrome);
+  border-left: 1px solid var(--border);
+}
+
+.memo-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 4px;
+}
+
+.memo-head h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.memo-head button {
+  padding: 3px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--chrome-hi);
+  color: var(--fg);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.memo-head button:hover:not(:disabled) {
+  background: #3a3a3a;
+}
+
+.memo-head button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.memo-count {
+  padding: 0 8px 6px;
+  border-bottom: 1px solid var(--border);
+  color: #888;
+  font-size: 11px;
+}
+
+#memo-list {
+  flex: 1;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+#memo-list li {
+  padding: 3px 8px;
+  font-family: var(--mono-font);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  cursor: pointer;
+}
+
+#memo-list li:hover {
+  background: var(--chrome-hi);
+}
+
+/* クリックでコピーしたときの一瞬のフィードバック。 */
+#memo-list li.copied {
+  background: #2f4a2f;
+}
+
+#memo-list li.empty {
+  color: #777;
+  font-family: var(--ui-font);
+  cursor: default;
+}
+
+#memo-list li.empty:hover {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------- ステータスバー */
+
+#status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: var(--chrome);
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.cwd {
+  overflow: hidden;
+  color: #aaa;
+  font-family: var(--mono-font);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.hint {
+  color: #777;
+}
+
+#status button {
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--chrome-hi);
+  color: var(--fg);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+#status button:hover {
+  background: #3a3a3a;
+}
+
+/* ドラッグ中はドロップ先が分かるように縁を光らせる。 */
+body.dragging #terms {
+  box-shadow: inset 0 0 0 3px #4a7ac0;
+}

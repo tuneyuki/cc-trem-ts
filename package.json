@@ -1,0 +1,27 @@
+{
+  "name": "my-term-ts",
+  "version": "0.1.0",
+  "description": "Claude Code 特化ターミナル (TypeScript / Electron 版)",
+  "private": true,
+  "main": "dist/main/main.js",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "start": "npm run build && electron .",
+    "shell": "npm run build && electron . --shell"
+  },
+  "dependencies": {
+    "@lydell/node-pty": "1.2.0-beta.12",
+    "@xterm/addon-fit": "0.10.0",
+    "@xterm/addon-unicode11": "0.8.0",
+    "@xterm/addon-webgl": "0.18.0",
+    "@xterm/xterm": "5.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "electron": "^43.2.0",
+    "esbuild": "^0.28.1",
+    "typescript": "^5.9.0"
+  }
+}

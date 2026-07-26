@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <!--
+      ローカルファイルしか読まないので default-src は 'none' で締める。
+      style-src に 'unsafe-inline' が要るのは xterm.js が <style> を動的に挿入するため。
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:;"
+    />
+    <title>my-term</title>
+    <!-- renderer.css は esbuild が xterm.css をバンドルして出力する -->
+    <link rel="stylesheet" href="./renderer.css" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- 上部: タブバー(M4 で中身を作る) -->
+      <div id="tabbar">
+        <div id="tabs"></div>
+        <button id="new-tab" type="button" title="新しいタブ">＋</button>
+      </div>
+
+      <!-- 中央: 端末領域(左) + 入力メモ(右) -->
+      <div id="main">
+        <div id="terms">
+          <!-- 承認まちの帯(M2)。該当時だけ表示する -->
+          <div id="waiting-banner" class="hidden">
+            ⚠ Claude Code が承認まちです — 確認してください
+          </div>
+          <!-- 各タブの xterm コンテナがここに差し込まれる -->
+        </div>
+
+        <!-- 既定は非表示。F1 で開く(初期表示のちらつきを避けるため HTML でも隠す) -->
+        <aside id="memo" class="hidden">
+          <div class="memo-head">
+            <h2>入力メモ</h2>
+            <button id="memo-export" type="button">エクスポート</button>
+            <button id="memo-clear" type="button">クリア</button>
+          </div>
+          <div id="memo-count" class="memo-count"></div>
+          <ul id="memo-list"></ul>
+        </aside>
+      </div>
+
+      <!-- 下部: ステータスバー(M3) -->
+      <div id="status">
+        <span id="cwd" class="cwd"></span>
+        <span class="spacer"></span>
+        <span class="hint">(画像ファイルはD&Dも可)</span>
+        <button id="paste-image" type="button">画像を貼り付け</button>
+      </div>
+    </div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
