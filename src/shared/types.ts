@@ -1,6 +1,6 @@
 // main / preload / renderer で共有する型定義。
 
-/** PTY で起動するプログラムの指定(Rust 版の LaunchConfig 相当)。 */
+/** PTY で起動するプログラムの指定。 */
 export interface LaunchConfig {
   program: string;
   args: string[];

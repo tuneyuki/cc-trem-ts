@@ -1,7 +1,6 @@
 // 入力メモ: ユーザが打った 1 行を Enter 確定のタイミングで記録していく。
 //
-// Rust 版は egui のイベント種別(Text/Paste/Key)ごとに処理していたが、
-// xterm.js の onData は「端末へ送られる生バイト列」なので、ここで
+// xterm.js の onData は「端末へ送られる生バイト列」が流れてくるので、
 // エスケープシーケンスを読み飛ばしつつ印字文字だけを拾う。
 
 export class MemoRecorder {

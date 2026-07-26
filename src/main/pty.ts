@@ -1,4 +1,4 @@
-// PTY セッション管理。Rust 版の term.rs のうち「PTY 起動・読み書き」に相当する部分。
+// PTY セッション管理。シェルの起動と読み書きだけを担う。
 // ANSI の解釈と画面グリッド保持は renderer 側の xterm.js が担当する。
 
 import * as nodePty from '@lydell/node-pty';

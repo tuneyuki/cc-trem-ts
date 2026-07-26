@@ -1,5 +1,5 @@
-// 配色: Rust 版 palette.rs と同じ「標準 xterm 相当」のパレット。
-// alacritty と違い xterm.js は 256 色の解決を自前で持っているので、
+// 配色: 標準 xterm 相当のパレット。
+// xterm.js が 256 色の解決を自前で持っているので、
 // ここでは基本 16 色と前景/背景/カーソルだけ指定すればよい。
 
 import type { ITheme } from '@xterm/xterm';

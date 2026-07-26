@@ -1,7 +1,6 @@
 # my-term-ts
 
-Claude Code を使うことに特化したターミナル(TypeScript / Electron 版)。
-Rust 版 [`../my-term`](../my-term) の移植で、機能はほぼ同等。
+Claude Code を使うことに特化したターミナル(TypeScript / Electron)。
 
 素の端末機能に加えて、
 
@@ -55,6 +54,7 @@ ccterm --shell    # 素のシェルで立ち上がる
 
 | キー | 動作 |
 | --- | --- |
+| `Ctrl+Enter` | claude の入力欄で改行する(送信しない) |
 | `F1` | 入力メモパネルの表示切替(既定は非表示) |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | タブを次 / 前へ切替 |
 | `Ctrl+C` `Ctrl+V` など | 通常どおり端末へ送られる |
@@ -91,4 +91,4 @@ renderer は `contextIsolation` 有効で Node API を直接触らず、
 
 ## ドキュメント
 
-- [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) — 段階ごとの実装計画と進捗、Rust 版との差分
+- [`docs/BUILD-PLAN.md`](docs/BUILD-PLAN.md) — 段階ごとの実装計画と進捗、設計上の判断

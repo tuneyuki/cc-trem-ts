@@ -1,8 +1,7 @@
 // 1 タブ = 1 端末セッション。xterm.js のインスタンスと PTY を結びつける。
 //
-// Rust 版では term.rs(PTY + alacritty)と main.rs の Tab 構造体に分かれていたが、
-// TS 版では PTY が main プロセス側にいるので、renderer 側のここは
-// 「xterm.js + PTY への IPC + タブ固有の状態」を持つ役になる。
+// PTY 自体は main プロセスにいるので、ここが持つのは
+// 「xterm.js + PTY への IPC + タブ固有の状態(承認まち・入力メモ)」。
 
 import { FitAddon } from '@xterm/addon-fit';
 import { Unicode11Addon } from '@xterm/addon-unicode11';
@@ -16,7 +15,7 @@ import { detectWaiting } from './waiting';
 
 const api = window.api;
 
-/** スクロールバック行数(Rust 版は可視領域のみだったので、ここは純粋な改善)。 */
+/** スクロールバック行数。 */
 const SCROLLBACK = 10000;
 
 /**
@@ -117,10 +116,18 @@ export class TermSession {
         event.preventDefault();
         return false;
       }
+      // Ctrl+Enter は「送信」ではなく「入力欄で改行」。
+      // xterm は修飾キーを見ずに CR を送ってしまい claude が送信と解釈するので、
+      // ここで横取りして ESC CR(= Alt+Enter 相当)を送る。
+      if (event.key === 'Enter' && event.ctrlKey && !event.altKey) {
+        this.sendSoftNewline();
+        event.preventDefault();
+        return false;
+      }
       return true;
     });
 
-    // ベルも「呼ばれている」合図として扱う(Rust 版と同じ)。
+    // ベルも「呼ばれている」合図として扱う。
     this.term.onBell(() => this.onAlert?.(this));
 
     // xterm 側のサイズが変わったら PTY にも伝える。
@@ -159,8 +166,7 @@ export class TermSession {
 
   /**
    * 可視画面のテキスト(承認まち検知に使う)。
-   * Rust 版 `TerminalSession::screen_text` 相当。WebGL 描画では DOM に文字が
-   * 残らないので、xterm.js のバッファから直接組み立てる。
+   * WebGL 描画では DOM に文字が残らないので、xterm.js のバッファから組み立てる。
    */
   screenText(): string {
     const buf = this.term.buffer.active;
@@ -176,6 +182,16 @@ export class TermSession {
   insertText(text: string): void {
     this.memo.append(text);
     this.send(text);
+  }
+
+  /**
+   * claude の入力欄で改行する(送信はしない)。
+   * ESC CR は Alt+Enter として送られるシーケンスで、claude はこれを改行として扱う。
+   * 入力メモ側にも改行として残しておく(1 件の複数行入力として記録される)。
+   */
+  sendSoftNewline(): void {
+    this.memo.append('\n');
+    this.send('\x1b\r');
   }
 
   /** タブ切替。表示に戻した時はサイズが変わっている可能性があるので測り直す。 */

@@ -1,9 +1,9 @@
-// my-term-ts : Claude Code 特化ターミナル(Electron / TypeScript 版)
+// my-term-ts : Claude Code 特化ターミナル(Electron / TypeScript)
 //
-// 構成(Rust 版との対応):
-//   ③ @lydell/node-pty : シェルを PTY(ConPTY) で起動して読み書き   <- portable-pty
-//   ② xterm.js         : バイト列を解釈して画面グリッド状態を保持   <- alacritty_terminal
-//   ① Electron/HTML    : グリッド描画・キー入力を PTY へ送る        <- eframe/egui
+// 構成:
+//   ③ @lydell/node-pty : シェルを PTY(ConPTY) で起動して読み書き
+//   ② xterm.js         : バイト列を解釈して画面グリッド状態を保持
+//   ① Electron/HTML    : グリッド描画・キー入力を PTY へ送る
 //
 // このファイルは main プロセス。ウィンドウ生成・PTY 管理・OS 機能(ダイアログ、
 // クリップボード画像、ビープ、タスクバー点滅)を担当する。

@@ -1,5 +1,4 @@
 // アプリ本体。タブ(TermSession)の管理と、周辺 UI の配線を行う。
-// Rust 版 main.rs の MyTermApp に相当する。
 
 import '@xterm/xterm/css/xterm.css';
 
@@ -202,7 +201,7 @@ class App {
         label.textContent = session.title;
         tab.appendChild(label);
 
-        // 1 つしかない時に閉じられると何も残らないので出さない(Rust 版と同じ)。
+        // 1 つしかない時に閉じられると何も残らないので出さない。
         if (this.sessions.length > 1) {
           const close = document.createElement('button');
           close.className = 'close';
@@ -258,7 +257,7 @@ class App {
     if (!session) return;
     const file = await api.clipboardImage();
     if (!file) {
-      // 画像が無いときは音で軽く知らせる(Rust 版と同じ)。
+      // 画像が無いときは音で軽く知らせる。
       api.beep();
       return;
     }
