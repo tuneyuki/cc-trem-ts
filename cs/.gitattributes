@@ -1,0 +1,2 @@
+# cmd.exe は LF 改行だと goto のラベルを見失うことがあるので CRLF で取り出す
+*.cmd text eol=crlf
