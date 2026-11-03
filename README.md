@@ -10,8 +10,8 @@ Claude Code を使うことに特化したターミナル(TypeScript / Electron)
 - 自分が打った入力を**メモとして自動で記録**し、あとで書き出せる
 - 複数プロジェクトをタブで並行して回せる
 
-> **C# 版もある。** Windows 標準の `csc.exe` だけでビルドできる WinForms 版を
-> [`cs/`](cs/README.md) に置いている(Node.js 不要)。
+> **C# 版もある。** Windows 標準の `csc.exe` だけでビルドできる軽量な WinForms 版を
+> [`cs/`](cs/README.md) に置いている(Node.js 不要、タブなし・半透過)。
 
 ## 使い方
 

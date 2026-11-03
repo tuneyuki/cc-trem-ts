@@ -74,7 +74,7 @@ namespace CcTerm
         /// <summary>
         /// アプリを起動したフォルダ。ここで claude を立ち上げる。
         /// `ccterm-cs` とだけ打って、いまいる場所でそのまま始められるようにするため、
-        /// 起動時にフォルダ選択ダイアログは出さない(新規タブでは選ばせる)。
+        /// フォルダ選択ダイアログは出さない。
         /// </summary>
         public static string StartupDir()
         {

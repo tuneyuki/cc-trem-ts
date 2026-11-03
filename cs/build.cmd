@@ -3,7 +3,7 @@ rem ---------------------------------------------------------------------------
 rem build.cmd - build ccterm-cs.exe with the csc.exe that ships with Windows
 rem             (.NET Framework 4.x, C# 5). No SDK, no NuGet.
 rem
-rem   build.cmd          -> bin\ccterm-cs.exe  (+ bin\assets\CascadiaMono-Regular.ttf)
+rem   build.cmd          -> bin\ccterm-cs.exe  (+ .exe.config, assets\CascadiaMono-Regular.ttf)
 rem
 rem NOTE: keep this file pure ASCII. cmd.exe reads .cmd in the OEM codepage
 rem (932 on a Japanese Windows), and UTF-8 text would corrupt later lines.
@@ -27,6 +27,8 @@ if not exist "%OUT%\assets" mkdir "%OUT%\assets"
 if errorlevel 1 goto :failed
 
 copy /y "%ROOT%..\assets\CascadiaMono-Regular.ttf" "%OUT%\assets\" >nul
+if errorlevel 1 goto :failed
+copy /y "%ROOT%app.config" "%OUT%\ccterm-cs.exe.config" >nul
 if errorlevel 1 goto :failed
 
 echo [build] ok: "%OUT%\ccterm-cs.exe"

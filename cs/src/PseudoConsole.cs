@@ -96,12 +96,13 @@ namespace CcTerm
         /// <summary>読み取りと終了監視のスレッドを起こす(イベントを繋いでから呼ぶ)。</summary>
         public void Begin()
         {
-            var reader = new Thread(ReadLoop);
+            // 読むだけのスレッドなので、スタックは既定(1MB)より小さくてよい。
+            var reader = new Thread(ReadLoop, 64 * 1024);
             reader.IsBackground = true;
             reader.Name = "pty-reader";
             reader.Start();
 
-            var waiter = new Thread(WaitLoop);
+            var waiter = new Thread(WaitLoop, 64 * 1024);
             waiter.IsBackground = true;
             waiter.Name = "pty-waiter";
             waiter.Start();
@@ -177,7 +178,7 @@ namespace CcTerm
             Native.ResizePseudoConsole(hPC, new Native.COORD(Math.Max(1, cols), Math.Max(1, rows)));
         }
 
-        /// <summary>セッションを終了させる(タブを閉じた時・アプリ終了時)。</summary>
+        /// <summary>セッションを終了させる(ウィンドウを閉じた時)。</summary>
         public void Kill()
         {
             if (closed != 0) return;

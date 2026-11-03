@@ -1,7 +1,7 @@
-// 1 タブ = 1 端末セッション。TerminalView と ConPTY を結びつける。
+// 1 ウィンドウ = 1 端末セッション。TerminalView と ConPTY を結びつける。
 // (TS 版 src/renderer/session.ts に相当)
 //
-// 持つのは「端末コントロール + ConPTY + タブ固有の状態(承認まち・入力メモ)」。
+// 持つのは「端末コントロール + ConPTY + セッション固有の状態(承認まち・入力メモ)」。
 
 using System;
 using System.IO;
@@ -21,13 +21,11 @@ namespace CcTerm
         public readonly MemoRecorder Memo = new MemoRecorder();
         /// <summary>ステータスバーに出す cwd。</summary>
         public readonly string Cwd;
-        /// <summary>タブ見出し(cwd のフォルダ名)。</summary>
+        /// <summary>ウィンドウタイトルに出す名前(cwd のフォルダ名)。</summary>
         public readonly string Title;
 
         /// <summary>いま承認まちか。</summary>
         public bool Waiting;
-        /// <summary>裏で承認まちになった等、ユーザに確認してほしい状態か(タブに ● を出す)。</summary>
-        public bool Attention;
 
         /// <summary>承認まち状態が変わったときに呼ばれる(UI 更新用)。</summary>
         public event Action<TermSession> WaitingChanged;
@@ -104,7 +102,7 @@ namespace CcTerm
             }
             catch (InvalidOperationException)
             {
-                // 既にタブが閉じられている。
+                // 既にウィンドウが閉じられている。
             }
         }
 
@@ -142,7 +140,7 @@ namespace CcTerm
             if (handler != null) handler(this);
         }
 
-        /// <summary>タブを閉じる / シェルが死んだ時の後始末。</summary>
+        /// <summary>ウィンドウを閉じる / シェルが死んだ時の後始末。</summary>
         public void Dispose(bool killPty)
         {
             if (disposed) return;

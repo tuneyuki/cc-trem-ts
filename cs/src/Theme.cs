@@ -19,12 +19,11 @@ namespace CcTerm
         /// <summary>ドラッグ中にドロップ先を示す色。</summary>
         public static readonly Color Drop = Color.FromArgb(0x4a, 0x7a, 0xc0);
 
-        /// <summary>タブバー・ステータスバーの背景。</summary>
+        /// <summary>ステータスバー・メモパネルの背景。</summary>
         public static readonly Color Chrome = Color.FromArgb(0x1a, 0x1a, 0x1a);
         /// <summary>ホバー・アクティブ。</summary>
         public static readonly Color ChromeHi = Color.FromArgb(0x2a, 0x2a, 0x2a);
         public static readonly Color Border = Color.FromArgb(0x33, 0x33, 0x33);
-        public static readonly Color Muted = Color.FromArgb(0x99, 0x99, 0x99);
         public static readonly Color Copied = Color.FromArgb(0x2f, 0x4a, 0x2f);
 
         /// <summary>端末の文字サイズ(96 DPI でのピクセル)。</summary>

@@ -230,7 +230,7 @@ namespace CcTerm
         [DllImport("gdi32.dll", CharSet = CharSet.Unicode, EntryPoint = "ExtTextOutW")]
         public static extern bool ExtTextOut(
             IntPtr hdc, int x, int y, uint options, ref RECT lprect,
-            string lpString, int c, int[] lpDx);
+            char[] lpString, int c, int[] lpDx);
 
         [DllImport("gdi32.dll")]
         public static extern int SetTextColor(IntPtr hdc, int color);

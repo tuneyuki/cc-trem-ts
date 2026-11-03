@@ -12,24 +12,52 @@ using System.Text;
 
 namespace CcTerm
 {
-    /// <summary>1 セル分の文字と属性。</summary>
+    /// <summary>
+    /// 1 セル分の文字と属性(12 バイト)。
+    /// スクロールバックの大半はセルなので、参照型のフィールドを持たせずに小さく保つ。
+    /// </summary>
     internal struct Cell
     {
-        /// <summary>BMP の 1 文字('\0' は空白扱い)。</summary>
-        public char Ch;
-        /// <summary>サロゲートペアや結合文字を含む場合の文字列全体(なければ null)。</summary>
-        public string Ext;
         public int Fg;
         public int Bg;
+        /// <summary>BMP の 1 文字('\0' は空白扱い)。Attr.Ext が立っていれば ExtText の番号。</summary>
+        public char Ch;
         public ushort Flags;
 
         public string Text
         {
             get
             {
-                if (Ext != null) return Ext;
+                if ((Flags & Attr.Ext) != 0) return ExtText.Get(Ch);
                 return Ch == '\0' ? " " : Ch.ToString();
             }
+        }
+    }
+
+    /// <summary>
+    /// サロゲートペア(絵文字)や結合文字つきの文字列を番号で持つ表。
+    /// こうした文字はまれなので、セルには番号だけを入れて文字列は共有する。
+    /// </summary>
+    internal static class ExtText
+    {
+        private static readonly List<string> list = new List<string>();
+        private static readonly Dictionary<string, int> index = new Dictionary<string, int>();
+
+        /// <summary>文字列の番号を返す。表が満杯なら -1。</summary>
+        public static int Intern(string s)
+        {
+            int i;
+            if (index.TryGetValue(s, out i)) return i;
+            if (list.Count > char.MaxValue) return -1;
+            i = list.Count;
+            list.Add(s);
+            index[s] = i;
+            return i;
+        }
+
+        public static string Get(char i)
+        {
+            return i < list.Count ? list[i] : "\ufffd";
         }
     }
 
@@ -48,6 +76,8 @@ namespace CcTerm
         public const ushort Wide = 256;
         /// <summary>全角文字の右半分(描画しない)。</summary>
         public const ushort WideCont = 512;
+        /// <summary>Ch が ExtText の番号である。</summary>
+        public const ushort Ext = 1024;
 
         public const ushort Style = Bold | Dim | Italic | Underline | Blink | Inverse | Hidden | Strike;
     }
@@ -113,7 +143,7 @@ namespace CcTerm
     internal sealed class TerminalBuffer
     {
         /// <summary>スクロールバック行数。</summary>
-        public const int ScrollbackLines = 10000;
+        public const int ScrollbackLines = 5000;
 
         private sealed class SavedCursor
         {
@@ -357,15 +387,37 @@ namespace CcTerm
 
         private static bool IsBlank(Cell[] row)
         {
-            foreach (var c in row)
-            {
-                if (c.Ext != null || (c.Ch != ' ' && c.Ch != '\0') || c.Bg != ColorCode.Default) return false;
-            }
-            return true;
+            return UsedLength(row) == 0;
         }
 
+        /// <summary>見た目が空白でないセルが続く長さ(行末の素の空白を除いた桁数)。</summary>
+        private static int UsedLength(Cell[] row)
+        {
+            int n = row.Length;
+            while (n > 0)
+            {
+                var c = row[n - 1];
+                bool blank = (c.Ch == ' ' || c.Ch == '\0') && c.Bg == ColorCode.Default &&
+                             (c.Flags & (Attr.Ext | Attr.Inverse | Attr.Underline | Attr.Strike)) == 0;
+                if (!blank) break;
+                n--;
+            }
+            return n;
+        }
+
+        /// <summary>
+        /// 行をスクロールバックへ送る。行末の空白は切り詰めて持つ
+        /// (ログの多くは短い行なので、これだけでメモリが数分の 1 になる)。
+        /// </summary>
         private void PushScrollback(Cell[] row)
         {
+            int used = UsedLength(row);
+            if (used < row.Length)
+            {
+                var trimmed = new Cell[used];
+                Array.Copy(row, trimmed, used);
+                row = trimmed;
+            }
             if (Scrollback.Add(row)) Dropped++;
             var handler = LineScrolledOff;
             if (handler != null) handler();
@@ -429,18 +481,20 @@ namespace CcTerm
             if (w == 2) ClearWideAt(row, CursorX + 1);
 
             var cell = new Cell();
+            ushort extFlag = 0;
             if (cp <= 0xFFFF)
             {
                 cell.Ch = (char)cp;
             }
             else
             {
-                cell.Ch = ' ';
-                cell.Ext = char.ConvertFromUtf32(cp);
+                int ext = ExtText.Intern(char.ConvertFromUtf32(cp));
+                cell.Ch = ext < 0 ? '\ufffd' : (char)ext;
+                if (ext >= 0) extFlag = Attr.Ext;
             }
             cell.Fg = fg;
             cell.Bg = bg;
-            cell.Flags = (ushort)(flags | (w == 2 ? Attr.Wide : 0));
+            cell.Flags = (ushort)(flags | extFlag | (w == 2 ? Attr.Wide : 0));
             row[CursorX] = cell;
 
             if (w == 2)
@@ -469,7 +523,10 @@ namespace CcTerm
             int x = pendingWrap ? CursorX : CursorX - 1;
             if (x < 0) return;
             if ((row[x].Flags & Attr.WideCont) != 0 && x > 0) x--;
-            row[x].Ext = row[x].Text + char.ConvertFromUtf32(cp);
+            int ext = ExtText.Intern(row[x].Text + char.ConvertFromUtf32(cp));
+            if (ext < 0) return;
+            row[x].Ch = (char)ext;
+            row[x].Flags |= Attr.Ext;
         }
 
         /// <summary>全角文字の片割れを上書きする前に、もう片方を空白に戻す。</summary>

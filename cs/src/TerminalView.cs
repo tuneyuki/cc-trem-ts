@@ -125,7 +125,7 @@ namespace CcTerm
             }
             catch (InvalidOperationException)
             {
-                // ハンドル破棄後(タブを閉じた直後)に届いた出力は捨てる。
+                // ハンドル破棄後(ウィンドウを閉じた直後)に届いた出力は捨てる。
             }
         }
 
@@ -136,6 +136,8 @@ namespace CcTerm
             {
                 data = pendingOut.ToString();
                 pendingOut.Length = 0;
+                // 大量出力のあとに大きな内部バッファを持ち続けないよう縮める。
+                if (pendingOut.Capacity > 64 * 1024) pendingOut.Capacity = 4096;
                 flushPosted = false;
             }
             if (IsDisposed || data.Length == 0) return;
@@ -256,18 +258,30 @@ namespace CcTerm
             Native.SelectObject(hdc, oldFont);
         }
 
+        // 描画のたびに確保しないよう、1 行分の作業領域を使い回す。
+        private char[] runChars = new char[256];
+        private int[] runDx = new int[256];
+        private int runLen;
+
         /// <summary>1 行を描く。色・フォント・装飾が同じセルはまとめて 1 回の ExtTextOut にする。</summary>
         private void DrawRow(IntPtr hdc, Cell[] line, long abs, int y, int cursorCol)
         {
             int cols = Buffer.Cols;
             int cw = font.CellWidth;
+            // 1 セルあたり最大で数文字(結合文字など)入るので余裕を持たせる。
+            if (runChars.Length < cols * 4)
+            {
+                runChars = new char[cols * 4];
+                runDx = new int[cols * 4];
+            }
+            runLen = 0;
 
-            var text = new StringBuilder();
-            var dx = new List<int>();
             int runStart = 0;
             int runFg = 0, runBg = 0, runFont = 0;
             ushort runDeco = 0;
             bool runBold = false;
+            int selColor = Theme.ToRgb(Theme.Selection);
+            int cursorColor = Theme.ToRgb(Theme.Cursor);
 
             int x = 0;
             while (x < cols)
@@ -283,7 +297,10 @@ namespace CcTerm
 
                 // 先頭を失った全角の右半分は空白として扱う。
                 int width = (cell.Flags & Attr.Wide) != 0 && x + 1 < cols ? 2 : 1;
-                string s = (cell.Flags & Attr.WideCont) != 0 ? " " : cell.Text;
+                bool blank = (cell.Flags & (Attr.WideCont | Attr.Hidden)) != 0 || cell.Ch == '\0';
+                bool ext = !blank && (cell.Flags & Attr.Ext) != 0;
+                string s = ext ? cell.Text : null;
+                char c = blank ? ' ' : cell.Ch;
 
                 bool isBold = (cell.Flags & Attr.Bold) != 0;
                 int fg = Theme.Resolve(cell.Fg, true, isBold);
@@ -295,23 +312,22 @@ namespace CcTerm
                     bg = t;
                 }
                 if ((cell.Flags & Attr.Dim) != 0) fg = Theme.Blend(fg, bg);
-                if ((cell.Flags & Attr.Hidden) != 0) s = " ";
-                if (IsSelected(abs, x)) bg = Theme.ToRgb(Theme.Selection);
+                if (hasSelection && IsSelected(abs, x)) bg = selColor;
                 if (x == cursorCol || (width == 2 && x + 1 == cursorCol))
                 {
                     fg = bg;
-                    bg = Theme.ToRgb(Theme.Cursor);
+                    bg = cursorColor;
                 }
 
-                int cp = s.Length > 1 && char.IsSurrogatePair(s, 0) ? char.ConvertToUtf32(s, 0) : s[0];
+                int cp = ext ? (char.IsSurrogatePair(s, 0) ? char.ConvertToUtf32(s, 0) : s[0]) : c;
                 int fontIndex = font.FontIndexFor(cp);
                 ushort deco = (ushort)(cell.Flags & (Attr.Underline | Attr.Strike));
 
-                bool same = text.Length > 0 && fg == runFg && bg == runBg && fontIndex == runFont &&
+                bool same = runLen > 0 && fg == runFg && bg == runBg && fontIndex == runFont &&
                             deco == runDeco && isBold == runBold;
                 if (!same)
                 {
-                    FlushRun(hdc, text, dx, runStart, x, y, runFg, runBg, runFont, runBold, runDeco);
+                    FlushRun(hdc, runStart, x, y, runFg, runBg, runFont, runBold, runDeco);
                     runStart = x;
                     runFg = fg;
                     runBg = bg;
@@ -320,23 +336,32 @@ namespace CcTerm
                     runBold = isBold;
                 }
 
-                text.Append(s);
-                dx.Add(cw * width);
-                for (int i = 1; i < s.Length; i++) dx.Add(0);
+                if (ext)
+                {
+                    for (int i = 0; i < s.Length && runLen < runChars.Length; i++)
+                    {
+                        runChars[runLen] = s[i];
+                        runDx[runLen++] = i == 0 ? cw * width : 0;
+                    }
+                }
+                else if (runLen < runChars.Length)
+                {
+                    runChars[runLen] = c;
+                    runDx[runLen++] = cw * width;
+                }
                 x += width;
             }
-            FlushRun(hdc, text, dx, runStart, x, y, runFg, runBg, runFont, runBold, runDeco);
+            FlushRun(hdc, runStart, x, y, runFg, runBg, runFont, runBold, runDeco);
         }
 
         private void FlushRun(
-            IntPtr hdc, StringBuilder text, List<int> dx, int startCol, int endCol, int y,
+            IntPtr hdc, int startCol, int endCol, int y,
             int fg, int bg, int fontIndex, bool isBold, ushort deco)
         {
-            if (text.Length == 0) return;
-            int cw = font.CellWidth;
+            if (runLen == 0) return;
             int ch = font.CellHeight;
-            int left = pad + startCol * cw;
-            int right = pad + endCol * cw;
+            int left = pad + startCol * font.CellWidth;
+            int right = pad + endCol * font.CellWidth;
 
             Native.SelectObject(hdc, font.Handle(fontIndex, isBold));
             Native.SetTextColor(hdc, Theme.ColorRef(fg));
@@ -344,13 +369,11 @@ namespace CcTerm
             var rect = new Native.RECT(left, y, right, y + ch);
             Native.ExtTextOut(
                 hdc, left, y + font.Ascent, Native.ETO_OPAQUE | Native.ETO_CLIPPED, ref rect,
-                text.ToString(), text.Length, dx.ToArray());
+                runChars, runLen, runDx);
 
             if ((deco & Attr.Underline) != 0) FillRect(hdc, left, y + font.Ascent + 1, right - left, 1, fg);
             if ((deco & Attr.Strike) != 0) FillRect(hdc, left, y + font.Ascent * 2 / 3, right - left, 1, fg);
-
-            text.Length = 0;
-            dx.Clear();
+            runLen = 0;
         }
 
         private static void FillRect(IntPtr hdc, int x, int y, int w, int h, int rgb)

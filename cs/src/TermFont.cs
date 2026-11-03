@@ -36,6 +36,7 @@ namespace CcTerm
         private readonly IntPtr regular;
         private readonly IntPtr bold;
         private readonly IntPtr[] fallbacks;
+        private readonly int px;
         private readonly IntPtr measureDc;
         /// <summary>コードポイント → 使うフォント(0 = 主フォント、1〜 = フォールバック)。</summary>
         private readonly Dictionary<int, int> fontOf = new Dictionary<int, int>();
@@ -73,11 +74,9 @@ namespace CcTerm
             bold = Create(face, px, Native.FW_BOLD);
             LogFont = MakeLogFont(face, px, Native.FW_NORMAL);
 
+            // フォールバックは和文や記号が初めて出てきたときに作る。
             fallbacks = new IntPtr[FallbackFaces.Length];
-            for (int i = 0; i < FallbackFaces.Length; i++)
-            {
-                fallbacks[i] = Create(FallbackFaces[i], px, Native.FW_NORMAL);
-            }
+            this.px = px;
 
             Native.SelectObject(measureDc, regular);
             Native.TEXTMETRIC tm;
@@ -137,7 +136,13 @@ namespace CcTerm
         public IntPtr Handle(int index, bool isBold)
         {
             if (index <= 0) return isBold ? bold : regular;
-            return fallbacks[index - 1];
+            return Fallback(index - 1);
+        }
+
+        private IntPtr Fallback(int i)
+        {
+            if (fallbacks[i] == IntPtr.Zero) fallbacks[i] = Create(FallbackFaces[i], px, Native.FW_NORMAL);
+            return fallbacks[i];
         }
 
         /// <summary>このコードポイントを描くフォント番号。グリフを持つ最初のフォントを選ぶ。</summary>
@@ -157,7 +162,7 @@ namespace CcTerm
             {
                 for (int i = 0; i < fallbacks.Length; i++)
                 {
-                    if (HasGlyph(fallbacks[i], cp))
+                    if (HasGlyph(Fallback(i), cp))
                     {
                         index = i + 1;
                         break;
