@@ -63,6 +63,11 @@ namespace CcTerm
         public event Action OutputProcessed;
         /// <summary>Ctrl+V でクリップボードに文字が無く画像があった。</summary>
         public event Action PasteImageRequested;
+        /// <summary>端末のタイトル(claude が送ってくる作業内容)が変わった。</summary>
+        public event Action TitleChanged;
+
+        /// <summary>既定の背景色(0xRRGGBB)。ウィンドウごとに色を付けるときに変える。</summary>
+        private int backRgb = Theme.ToRgb(Theme.Bg);
 
         public TerminalView()
         {
@@ -77,6 +82,11 @@ namespace CcTerm
             Buffer = new TerminalBuffer(80, 24);
             parser = new VtParser(Buffer);
             Buffer.Reply += delegate(string s) { RaiseReply(s); };
+            Buffer.TitleChanged += delegate
+            {
+                var handler = TitleChanged;
+                if (handler != null) handler();
+            };
             Buffer.Bell += delegate
             {
                 var handler = Bell;
@@ -97,6 +107,14 @@ namespace CcTerm
         public int Rows
         {
             get { return Buffer.Rows; }
+        }
+
+        /// <summary>既定の背景色を変える(ウィンドウごとの色分け)。</summary>
+        public void SetBackground(Color color)
+        {
+            backRgb = Theme.ToRgb(color);
+            BackColor = color;
+            Invalidate();
         }
 
         /// <summary>枠線(承認まち・ドラッグ中の強調)。Color.Empty で消す。</summary>
@@ -215,7 +233,7 @@ namespace CcTerm
         {
             int cw = font.CellWidth;
             int ch = font.CellHeight;
-            FillRect(hdc, 0, 0, ClientSize.Width, ClientSize.Height, Theme.ToRgb(Theme.Bg));
+            FillRect(hdc, 0, 0, ClientSize.Width, ClientSize.Height, backRgb);
 
             IntPtr oldFont = Native.SelectObject(hdc, font.Handle(0, false));
             Native.SetTextAlign(hdc, Native.TA_BASELINE);
@@ -304,7 +322,7 @@ namespace CcTerm
 
                 bool isBold = (cell.Flags & Attr.Bold) != 0;
                 int fg = Theme.Resolve(cell.Fg, true, isBold);
-                int bg = Theme.Resolve(cell.Bg, false, false);
+                int bg = cell.Bg == ColorCode.Default ? backRgb : Theme.Resolve(cell.Bg, false, false);
                 if ((cell.Flags & Attr.Inverse) != 0)
                 {
                     int t = fg;

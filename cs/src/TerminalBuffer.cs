@@ -858,15 +858,22 @@ namespace CcTerm
 
         // ---------------------------------------------------------- OSC
 
-        /// <summary>ウィンドウタイトル(OSC 0 / 2)。今のところ表示には使っていない。</summary>
+        /// <summary>ウィンドウタイトル(OSC 0 / 2)。claude は作業内容の短い説明をここに送ってくる。</summary>
         public string Title { get; private set; }
+        /// <summary>Title が変わった。</summary>
+        public event Action TitleChanged;
 
         public void OscDispatch(string data)
         {
             int semi = data.IndexOf(';');
             if (semi < 0) return;
             string code = data.Substring(0, semi);
-            if (code == "0" || code == "2") Title = data.Substring(semi + 1);
+            if (code != "0" && code != "2") return;
+            string title = data.Substring(semi + 1);
+            if (title == Title) return;
+            Title = title;
+            var handler = TitleChanged;
+            if (handler != null) handler();
         }
 
         // ---------------------------------------------------------- CSI シーケンス

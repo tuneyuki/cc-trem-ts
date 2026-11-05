@@ -4,6 +4,8 @@
 //   中央: 端末(左)+ 入力メモ(右、F1 で開閉)/ 下: ステータスバー
 //
 // 軽量化のため、タブは持たない(別のフォルダで使うときはもう 1 つ起動する)。
+// 複数起動したときに見分けやすいよう、起動時に画面の 4 分割の空いている区画へ収まり、
+// ウィンドウごとに色を付け、タイトルに claude の作業内容を出す。
 // 入力メモのパネルは F1 で初めて開いたときに作る。
 
 using System;
@@ -31,6 +33,15 @@ namespace CcTerm
         private readonly Panel termHost;
         private readonly Label banner;
         private readonly Label cwdLabel;
+        private readonly Panel status;
+        private readonly Panel statusInner;
+
+        /// <summary>4 分割のどの区画にいるか(-1 は区画なし)。</summary>
+        private int slot = -1;
+        /// <summary>このウィンドウの色(Theme.Tints の番号)。</summary>
+        private int colorIndex;
+        /// <summary>色を付けた端末の背景色。</summary>
+        private Color termBg = Theme.Bg;
 
         // 入力メモのパネル(初めて開くまで null)。
         private Panel memoPanel;
@@ -83,13 +94,13 @@ namespace CcTerm
             termHost.Resize += delegate { banner.Width = termHost.ClientSize.Width; };
 
             // --- 下: ステータスバー
-            var status = new Panel();
+            status = new Panel();
             status.Dock = DockStyle.Bottom;
             status.Height = Font.Height + S(12);
             status.BackColor = Theme.Border; // 上端 1px を境界線に見せる
             status.Padding = new Padding(0, 1, 0, 0);
 
-            var statusInner = new Panel();
+            statusInner = new Panel();
             statusInner.Dock = DockStyle.Fill;
             statusInner.BackColor = Theme.Chrome;
             statusInner.Padding = new Padding(S(8), S(3), S(8), S(3));
@@ -169,18 +180,71 @@ namespace CcTerm
             return p;
         }
 
+        // ------------------------------------------------------------ 配置と色分け
+
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+
+            // 他の ccterm-cs と被らない色を選ぶ(同じフォルダならなるべく同じ色)。
+            colorIndex = WindowLayout.ChooseColor(Handle, Launch.StartupDir());
+            WindowLayout.SetColor(Handle, colorIndex);
+            ApplyTint();
+
+            // 4 分割の空いている区画へ収まる。全部埋まっていれば Windows 既定の位置のまま。
+            slot = WindowLayout.ChooseSlot(Handle);
+            if (slot >= 0)
+            {
+                WindowLayout.SetSlot(Handle, slot);
+                WindowLayout.MoveToSlot(this, slot, Screen.FromPoint(Cursor.Position));
+            }
+        }
+
+        /// <summary>端末の背景とステータスバーに、このウィンドウの色をうっすら混ぜる。</summary>
+        private void ApplyTint()
+        {
+            Color tint = Theme.Tints[colorIndex];
+            termBg = Theme.Mix(Theme.Bg, tint, 0.12);
+            BackColor = termBg;
+            termHost.BackColor = termBg;
+            status.BackColor = tint; // ステータスバー上端の線をその色にする
+            statusInner.BackColor = Theme.Mix(Theme.Chrome, tint, 0.3);
+            if (session != null) session.View.SetBackground(termBg);
+        }
+
+        /// <summary>開いている ccterm-cs をすべて 4 分割に並べ直す。</summary>
+        private void ArrangeAll()
+        {
+            WindowLayout.ArrangeAll(Handle);
+        }
+
+        protected override void OnHandleDestroyed(EventArgs e)
+        {
+            WindowLayout.Clear(Handle);
+            base.OnHandleDestroyed(e);
+        }
+
         // ------------------------------------------------------------ 起動・終了
 
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
 
+            // 表示前は見えない枠の大きさが正しく取れないので、表示後に合わせ直す。
+            if (slot >= 0) WindowLayout.MoveToSlot(this, slot, Screen.FromControl(this));
+
             // どちらのモードでも「起動したフォルダ」で開く。
             string cwd = Launch.StartupDir();
             var launch = plainShell ? Launch.Shell(cwd) : Launch.Claude(cwd);
 
             session = new TermSession(launch);
-            session.WaitingChanged += delegate { UpdateWaitingUi(); };
+            session.WaitingChanged += delegate
+            {
+                UpdateWaitingUi();
+                UpdateTitle();
+            };
+            session.View.TitleChanged += UpdateTitle;
+            session.View.SetBackground(termBg);
             session.Alert += HandleAlert;
             // シェルが終わったらウィンドウも閉じる。
             session.Exited += delegate { Close(); };
@@ -190,7 +254,7 @@ namespace CcTerm
 
             termHost.Controls.Add(session.View);
             banner.BringToFront();
-            Text = session.Title + " - my-term";
+            UpdateTitle();
             cwdLabel.Text = "cwd: " + session.Cwd;
             session.View.Focus();
 
@@ -235,11 +299,25 @@ namespace CcTerm
                 ToggleMemo();
                 return true;
             }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.A))
+            {
+                ArrangeAll();
+                return true;
+            }
             return base.ProcessCmdKey(ref msg, keyData);
         }
 
         protected override void WndProc(ref Message m)
         {
+            // 他の ccterm-cs(または自分)からの並べ直しの依頼。
+            if (m.Msg == WindowLayout.ArrangeMessage && WindowLayout.ArrangeMessage != 0)
+            {
+                slot = m.WParam.ToInt32();
+                WindowLayout.SetSlot(Handle, slot);
+                WindowLayout.MoveToSlot(this, slot, Screen.FromHandle(m.LParam));
+                return;
+            }
+
             // Alt を単独で押して離すとシステムメニューにフォーカスが移り、
             // 以後のキーが端末に届かなくなる。Alt+Space(システムメニュー)以外は握りつぶす。
             if (m.Msg == Native.WM_SYSCOMMAND &&
@@ -249,6 +327,39 @@ namespace CcTerm
                 return;
             }
             base.WndProc(ref m);
+        }
+
+        // ------------------------------------------------------------ タイトル
+
+        /// <summary>
+        /// ウィンドウタイトル = [承認まちの印] フォルダ名 — claude の作業内容。
+        /// タスクバーや Alt+Tab で、どのウィンドウが何をしているか見分けられるようにする。
+        /// </summary>
+        private void UpdateTitle()
+        {
+            if (session == null) return;
+            var sb = new StringBuilder();
+            if (session.Waiting) sb.Append("\u26a0 ");
+            sb.Append(session.Title);
+            string task = TaskTitle(session.View.Buffer.Title);
+            if (task.Length > 0) sb.Append(" \u2014 ").Append(task);
+            sb.Append(" - my-term");
+            string text = sb.ToString();
+            if (Text != text) Text = text;
+        }
+
+        /// <summary>
+        /// 端末に送られてきたタイトルのうち、作業内容として出す価値があるもの。
+        /// 起動直後に ConPTY が送ってくるシェルの実行ファイルのパスなどは出さない。
+        /// </summary>
+        private static string TaskTitle(string title)
+        {
+            if (string.IsNullOrEmpty(title)) return "";
+            string t = title.Trim();
+            string lower = t.ToLowerInvariant();
+            bool isPath = t.Length >= 3 && t[1] == ':' && (t[2] == '\\' || t[2] == '/');
+            if (isPath || lower.EndsWith(".exe") || lower == "windows powershell" || lower == "claude") return "";
+            return t.Length > 80 ? t.Substring(0, 80) + "\u2026" : t;
         }
 
         // ------------------------------------------------------------ 承認まちの検知と通知

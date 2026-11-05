@@ -74,6 +74,31 @@ namespace CcTerm
             return Palette[code & 0xFF];
         }
 
+        /// <summary>
+        /// ウィンドウの色分けに使う色(フォルダごとに 1 つ選ぶ)。
+        /// 承認まちのオレンジとは紛れないよう、オレンジ系は入れていない。
+        /// </summary>
+        public static readonly Color[] Tints =
+        {
+            Color.FromArgb(0x3d, 0x7b, 0xd9), // 青
+            Color.FromArgb(0x3d, 0xaa, 0x5c), // 緑
+            Color.FromArgb(0x9a, 0x5c, 0xd9), // 紫
+            Color.FromArgb(0xd9, 0x4d, 0x4d), // 赤
+            Color.FromArgb(0x3d, 0xb5, 0xb5), // 青緑
+            Color.FromArgb(0xc9, 0xb1, 0x3d), // 黄
+            Color.FromArgb(0xd9, 0x5c, 0xa8), // 桃
+            Color.FromArgb(0x7a, 0x86, 0x99), // 灰青
+        };
+
+        /// <summary>a に b を t(0〜1)の割合で混ぜる。</summary>
+        public static Color Mix(Color a, Color b, double t)
+        {
+            return Color.FromArgb(
+                (int)Math.Round(a.R + (b.R - a.R) * t),
+                (int)Math.Round(a.G + (b.G - a.G) * t),
+                (int)Math.Round(a.B + (b.B - a.B) * t));
+        }
+
         /// <summary>2 色の中間(薄字 SGR 2 用)。</summary>
         public static int Blend(int a, int b)
         {

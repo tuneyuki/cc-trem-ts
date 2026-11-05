@@ -318,6 +318,39 @@ namespace CcTerm
         [DllImport("user32.dll")]
         public static extern bool MessageBeep(uint uType);
 
+        // ------------------------------------------------------------ ウィンドウの配置・相互認識
+
+        public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        public static extern bool IsWindowVisible(IntPtr hWnd);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "SetPropW")]
+        public static extern bool SetProp(IntPtr hWnd, string lpString, IntPtr hData);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "GetPropW")]
+        public static extern IntPtr GetProp(IntPtr hWnd, string lpString);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "RemovePropW")]
+        public static extern IntPtr RemoveProp(IntPtr hWnd, string lpString);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode, EntryPoint = "RegisterWindowMessageW")]
+        public static extern int RegisterWindowMessage(string lpString);
+
+        [DllImport("user32.dll")]
+        public static extern bool PostMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+
+        public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+
+        [DllImport("dwmapi.dll")]
+        public static extern int DwmGetWindowAttribute(IntPtr hwnd, int dwAttribute, out RECT pvAttribute, int cbAttribute);
+
         // ------------------------------------------------------------ ウィンドウメッセージ
 
         public const int WM_SYSCOMMAND = 0x0112;
